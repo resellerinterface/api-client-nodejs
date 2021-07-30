@@ -1,0 +1,21 @@
+{
+  "name": "@resellerinterface/api-client-nodejs",
+  "version": "1.0.0",
+  "description": "",
+  "main": "./src/Client.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:resellerinterface/api-client-nodejs.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "fetch-cookie": "^0.10.1",
+    "file-type": "^16.0.0",
+    "form-data": "^3.0.0",
+    "node-fetch": "^2.6.1"
+  }
+}
