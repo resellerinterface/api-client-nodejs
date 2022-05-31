@@ -4,18 +4,24 @@ const ApiResponseDownload = require("./Response/ApiResponseDownload");
 const fetch = require('fetch-cookie')(nodeFetch);
 const FormData = require('form-data');
 const FileType = require('file-type');
-const packageVersion =  require('../package').version;
+const packageVersion = require('../package').version;
+const https = require('https');
 
 const RESPONSE_RESPONSE = "RESPONSE_RESPONSE";
 const RESPONSE_DOWNLOAD = "RESPONSE_DOWNLOAD";
+
+const IP_RESOLVE_V4 = "ipv4";
+const IP_RESOLVE_V6 = "ipv6";
+const IP_RESOLVE_ANY = "any";
 
 class Client {
     /**
      *
      * @param baseUrl
      * @param version
+     * @param options
      */
-    constructor(baseUrl = "https://core.resellerinterface.de/", version = "stable") {
+    constructor(baseUrl = "https://core.resellerinterface.de/", version = "stable", options = {}) {
         if (!baseUrl.endsWith("/")) baseUrl += "/";
         this.baseUrl = baseUrl;
 
@@ -25,6 +31,35 @@ class Client {
             this.version = 'v' + parseInt(version);
         } else {
             throw new Error('Invalid version provided')
+        }
+
+        this.httpsAgent = new https.Agent();
+        this.setOptions(options);
+    }
+
+    /**
+     *
+     * @param options
+     */
+    setOptions(options) {
+        if (options['ipResolve']) {
+            this.setIpResolve(options['ipResolve'])
+        }
+    }
+
+    /**
+     *
+     * @param option
+     */
+    setIpResolve(option) {
+        if (option === IP_RESOLVE_V4) {
+            this.httpsAgent = new https.Agent({family: 4});
+        } else {
+            if (option === IP_RESOLVE_V6) {
+                this.httpsAgent = new https.Agent({family: 6});
+            } else {
+                this.httpsAgent = new https.Agent();
+            }
         }
     }
 
@@ -48,6 +83,32 @@ class Client {
 
     /**
      *
+     * @param current
+     * @param returnValue
+     * @param prefix
+     * @returns {*[]}
+     */
+    buildPostArray(current, returnValue = [], prefix) {
+        for (const k in current) {
+            let v = current[k];
+            const newPrefix = prefix ? prefix + '[' + k + ']' : k;
+            if (typeof v === 'object') {
+                returnValue = this.buildPostArray(v, returnValue, newPrefix)
+            } else {
+                if (v === true) {
+                    v = "true";
+                }
+                if (v === false) {
+                    v = "false";
+                }
+                returnValue[newPrefix] = v;
+            }
+        }
+        return returnValue;
+    }
+
+    /**
+     *
      * @param action
      * @param params
      * @param responseType
@@ -61,9 +122,9 @@ class Client {
         }
 
         const form = new FormData();
-
-        for (const name in params) {
-            form.append(name, params[name]);
+        const formData = this.buildPostArray(params);
+        for (const name in formData) {
+            form.append(name, formData[name]);
         }
 
         const url = this.baseUrl + this.version + '/';
@@ -74,7 +135,8 @@ class Client {
                     const response = await fetch(url + action, {
                         method: 'post',
                         body: form,
-                        headers: { 'User-Agent': 'api-client-nodejs/' + packageVersion }
+                        headers: {'User-Agent': 'api-client-nodejs/' + packageVersion},
+                        agent: this.httpsAgent
                     }).then(res => res.json())
 
                     return new ApiResponse(response);
@@ -89,7 +151,8 @@ class Client {
                     const file = await fetch(url + action, {
                         method: 'post',
                         body: form,
-                        headers: { 'User-Agent': 'api-client-nodejs/' + packageVersion }
+                        headers: {'User-Agent': 'api-client-nodejs/' + packageVersion},
+                        agent: this.httpsAgent
                     }).then(res => {
                         filename = res.headers.get('content-disposition').match(/.*filename=[\'\"]?([^\"]+)/)[1] || null;
                         filesize = parseInt(res.headers.get('content-length'));
