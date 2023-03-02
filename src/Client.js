@@ -3,7 +3,6 @@ const ApiResponse = require("./Response/ApiResponse");
 const ApiResponseDownload = require("./Response/ApiResponseDownload");
 const fetch = require('fetch-cookie')(nodeFetch);
 const FormData = require('form-data');
-const FileType = require('file-type');
 const packageVersion = require('../package').version;
 const https = require('https');
 
@@ -147,6 +146,7 @@ class Client {
             case RESPONSE_DOWNLOAD: {
                 let filename = null;
                 let filesize = null;
+                let filetype = null;
                 try {
                     const file = await fetch(url + action, {
                         method: 'post',
@@ -156,10 +156,10 @@ class Client {
                     }).then(res => {
                         filename = res.headers.get('content-disposition').match(/.*filename=[\'\"]?([^\"]+)/)[1] || null;
                         filesize = parseInt(res.headers.get('content-length'));
+                        filetype = res.headers.get('content-type')
                         return res.buffer();
                     });
-                    let filetype = await FileType.fromBuffer(file);
-                    return new ApiResponseDownload(file, filename, filesize, filetype.mime);
+                    return new ApiResponseDownload(file, filename, filesize, filetype);
                 } catch (e) {
                     throw new Error('Fetch-Error: ' + e);
                 }
