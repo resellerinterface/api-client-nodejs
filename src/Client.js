@@ -32,6 +32,11 @@ class Client {
             throw new Error('Invalid version provided')
         }
 
+        this.userAgent = 'api-client-nodejs/' + packageVersion;
+        if(process && process.versions && process.versions.node) {
+            this.userAgent += " node/" + process.versions.node;
+        }
+
         this.httpsAgent = new https.Agent();
         this.setOptions(options);
     }
@@ -134,7 +139,7 @@ class Client {
                     const response = await fetch(url + action, {
                         method: 'post',
                         body: form,
-                        headers: {'User-Agent': 'api-client-nodejs/' + packageVersion},
+                        headers: {'User-Agent': this.userAgent},
                         agent: this.httpsAgent
                     }).then(res => res.json())
 
@@ -151,7 +156,7 @@ class Client {
                     const file = await fetch(url + action, {
                         method: 'post',
                         body: form,
-                        headers: {'User-Agent': 'api-client-nodejs/' + packageVersion},
+                        headers: {'User-Agent': this.userAgent},
                         agent: this.httpsAgent
                     }).then(res => {
                         filename = res.headers.get('content-disposition').match(/.*filename=[\'\"]?([^\"]+)/)[1] || null;
