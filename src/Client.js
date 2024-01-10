@@ -42,6 +42,22 @@ class Client {
 
     /**
      *
+     * @returns {string}
+     */
+    getBaseUrl() {
+        return this.baseUrl;
+    }
+
+    /**
+     *
+     * @returns {string}
+     */
+    getVersion() {
+        return this.version;
+    }
+
+    /**
+     *
      * @param options
      */
     setOptions(options) {
