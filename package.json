@@ -13,8 +13,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "fetch-cookie": "^2.1.0",
     "form-data": "^4.0.0",
-    "node-fetch": "^2.6.9"
+    "node-fetch": "^2.7.0"
   }
 }

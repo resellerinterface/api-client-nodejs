@@ -1,7 +1,6 @@
-const nodeFetch = require('node-fetch');
 const ApiResponse = require("./Response/ApiResponse");
 const ApiResponseDownload = require("./Response/ApiResponseDownload");
-const fetch = require('fetch-cookie')(nodeFetch);
+const fetch = require('node-fetch');
 const FormData = require('form-data');
 const packageVersion = require('../package').version;
 const https = require('https');
@@ -16,8 +15,8 @@ const IP_RESOLVE_ANY = "any";
 class Client {
     /**
      *
-     * @param baseUrl
-     * @param version
+     * @param {string} baseUrl
+     * @param {string} version
      * @param options
      */
     constructor(baseUrl = "https://core.resellerinterface.de/", version = "stable", options = {}) {
@@ -43,11 +42,30 @@ class Client {
 
     /**
      *
+     * @returns {string}
+     */
+    getBaseUrl() {
+        return this.baseUrl;
+    }
+
+    /**
+     *
+     * @returns {string}
+     */
+    getVersion() {
+        return this.version;
+    }
+
+    /**
+     *
      * @param options
      */
     setOptions(options) {
         if (options['ipResolve']) {
             this.setIpResolve(options['ipResolve'])
+        }
+        if(options['userAgent']) {
+            this.setUserAgent(options['userAgent']);
         }
     }
 
@@ -65,6 +83,22 @@ class Client {
                 this.httpsAgent = new https.Agent();
             }
         }
+    }
+
+    /**
+     *
+     * @param {string} option
+     */
+    setUserAgent(option) {
+        this.userAgent = option;
+    }
+
+    /**
+     *
+     * @returns {string}
+     */
+    getUserAgent() {
+        return this.userAgent;
     }
 
     /**
@@ -136,11 +170,9 @@ class Client {
         switch (responseType) {
             case RESPONSE_RESPONSE: {
                 try {
-                    const response = await fetch(url + action, {
+                    const response = await this.fetchWrapper(url + action, {
                         method: 'post',
                         body: form,
-                        headers: {'User-Agent': this.userAgent},
-                        agent: this.httpsAgent
                     }).then(res => res.json())
 
                     return new ApiResponse(response);
@@ -153,11 +185,9 @@ class Client {
                 let filesize = null;
                 let filetype = null;
                 try {
-                    const file = await fetch(url + action, {
+                    const file = await this.fetchWrapper(url + action, {
                         method: 'post',
                         body: form,
-                        headers: {'User-Agent': this.userAgent},
-                        agent: this.httpsAgent
                     }).then(res => {
                         filename = res.headers.get('content-disposition').match(/.*filename=[\'\"]?([^\"]+)/)[1] || null;
                         filesize = parseInt(res.headers.get('content-length'));
@@ -174,6 +204,54 @@ class Client {
             }
         }
 
+    }
+
+    /**
+     *
+     * @param {string,null} session
+     */
+    setSession(session) {
+        this.session = session;
+    }
+
+    /**
+     *
+     * @returns {string|null}
+     */
+    getSession() {
+        return this.session || null;
+    }
+
+    async fetchWrapper(url, options = {}){
+        if(options.headers) {
+            options.headers['User-Agent'] = this.userAgent;
+        } else {
+            options.headers = {'User-Agent': this.userAgent}
+        }
+
+        options.agent = this.httpsAgent;
+
+        if(this.session) {
+            options.headers.cookie = 'coreSID=' + this.session;
+        }
+
+        try {
+            const res = await fetch(url, options);
+
+            const cookies = res.headers.get('set-cookie');
+
+            if(cookies) {
+                const match = cookies.match(/coreSID=*([^;]*)/mi);
+
+                if(match) {
+                    this.session = match[1];
+                }
+            }
+
+            return res;
+        } catch (e) {
+            throw new Error('Fetch-Error: ' + e);
+        }
     }
 
 }
